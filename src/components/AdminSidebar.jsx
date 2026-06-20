@@ -10,12 +10,14 @@ import {
     LogOut,
     HelpCircle,
     Newspaper,
+    ClipboardList,
 } from "lucide-react"
 
 function AdminSidebar() {
     const links = [
         { name: "Dashboard", path: "/admin", icon: <LayoutDashboard size={18} /> },
         { name: "Projects", path: "/admin/projects", icon: <FolderKanban size={18} /> },
+        { name: "Project Requests", path: "/admin/project-requests", icon: <ClipboardList size={18} /> },
         { name: "Skills", path: "/admin/skills", icon: <Code2 size={18} /> },
         { name: "Services", path: "/admin/services", icon: <BriefcaseBusiness size={18} /> },
         { name: "Testimonials", path: "/admin/testimonials", icon: <Star size={18} /> },

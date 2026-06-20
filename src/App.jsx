@@ -27,6 +27,7 @@ import AdminSettings from "./pages/AdminSettings"
 import AdminTestimonials from "./pages/AdminTestimonials"
 import AdminFAQ from "./pages/AdminFAQ"
 import AdminBlogs from "./pages/AdminBlogs"
+import AdminProjectRequests from "./pages/AdminProjectRequests"
 
 function AppContent() {
   const [loading, setLoading] = useState(true)
@@ -136,6 +137,15 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <AdminBlogs />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/project-requests"
+          element={
+            <ProtectedRoute>
+              <AdminProjectRequests />
             </ProtectedRoute>
           }
         />
