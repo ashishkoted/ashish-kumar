@@ -17,6 +17,19 @@ import {
 import { useTheme } from "../context/ThemeContext"
 import { playSound } from "../utils/playSound"
 
+function getOptimizedImage(url, width = 1000) {
+    if (!url) return ""
+
+    if (url.includes("res.cloudinary.com") && url.includes("/upload/")) {
+        return url.replace(
+            "/upload/",
+            `/upload/f_auto,q_auto,w_${width},dpr_auto/`
+        )
+    }
+
+    return url
+}
+
 function ProjectModal({ project, onClose }) {
     const { theme } = useTheme()
     const isDark = theme === "dark"
@@ -96,7 +109,9 @@ function ProjectModal({ project, onClose }) {
                         </div>
 
                         <button
+                            type="button"
                             onClick={closeModal}
+                            aria-label="Close project details"
                             className={`w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition ${isDark ? "bg-white/10" : "bg-gray-100"
                                 }`}
                         >
@@ -107,8 +122,13 @@ function ProjectModal({ project, onClose }) {
                     <div className={isDark ? "bg-black/30 p-4" : "bg-gray-50 p-4"}>
                         {project.imageUrl ? (
                             <img
-                                src={project.imageUrl}
-                                alt={project.title}
+                                src={getOptimizedImage(project.imageUrl, 1000)}
+                                alt={`${project.title || "Project"} main screenshot`}
+                                width="1000"
+                                height="600"
+                                loading="eager"
+                                fetchPriority="high"
+                                decoding="async"
                                 className="w-full max-h-[420px] object-contain rounded-2xl border border-cyan-400/20"
                             />
                         ) : (
@@ -167,7 +187,7 @@ function ProjectModal({ project, onClose }) {
                                 <div className="flex flex-wrap gap-3">
                                     {techList.map((item, index) => (
                                         <span
-                                            key={index}
+                                            key={`${item}-${index}`}
                                             className="px-4 py-2 rounded-full bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 text-sm font-bold"
                                         >
                                             {item}
@@ -219,14 +239,21 @@ function ProjectModal({ project, onClose }) {
                                 <div className="grid md:grid-cols-2 gap-4">
                                     {featureList.map((feature, index) => (
                                         <div
-                                            key={index}
+                                            key={`${feature}-${index}`}
                                             className={`p-4 rounded-2xl border flex gap-3 ${isDark
                                                     ? "bg-white/5 border-white/10"
                                                     : "bg-gray-50 border-gray-200"
                                                 }`}
                                         >
-                                            <CheckCircle className="text-cyan-400 mt-1" size={20} />
-                                            <p className={isDark ? "text-gray-300" : "text-gray-700"}>
+                                            <CheckCircle
+                                                className="text-cyan-400 mt-1 shrink-0"
+                                                size={20}
+                                            />
+                                            <p
+                                                className={
+                                                    isDark ? "text-gray-300" : "text-gray-700"
+                                                }
+                                            >
                                                 {feature}
                                             </p>
                                         </div>
@@ -256,15 +283,21 @@ function ProjectModal({ project, onClose }) {
                                         <button
                                             type="button"
                                             onClick={() => openImage(index)}
-                                            key={index}
+                                            key={`${img}-${index}`}
+                                            aria-label={`Open project screenshot ${index + 1}`}
                                             className={`group relative rounded-2xl overflow-hidden border text-left ${isDark
                                                     ? "border-white/10 bg-white/5"
                                                     : "border-gray-200 bg-gray-50"
                                                 }`}
                                         >
                                             <img
-                                                src={img}
+                                                src={getOptimizedImage(img, 600)}
                                                 alt={`Project Screenshot ${index + 1}`}
+                                                width="600"
+                                                height="350"
+                                                loading="lazy"
+                                                fetchPriority="low"
+                                                decoding="async"
                                                 className="w-full h-56 object-cover group-hover:scale-105 transition duration-500"
                                             />
 
@@ -312,7 +345,9 @@ function ProjectModal({ project, onClose }) {
             {activeImage !== null && (
                 <div className="fixed inset-0 z-[10000] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
                     <button
+                        type="button"
                         onClick={closeImage}
+                        aria-label="Close image preview"
                         className="absolute top-5 right-5 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-red-500 transition text-white"
                     >
                         <X size={22} />
@@ -320,7 +355,9 @@ function ProjectModal({ project, onClose }) {
 
                     {screenshotList.length > 1 && (
                         <button
+                            type="button"
                             onClick={prevImage}
+                            aria-label="Previous screenshot"
                             className="absolute left-4 md:left-8 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-cyan-400 hover:text-black transition text-white"
                         >
                             <ChevronLeft size={26} />
@@ -328,14 +365,20 @@ function ProjectModal({ project, onClose }) {
                     )}
 
                     <img
-                        src={screenshotList[activeImage]}
-                        alt="Preview"
+                        src={getOptimizedImage(screenshotList[activeImage], 1400)}
+                        alt={`Project screenshot preview ${activeImage + 1}`}
+                        width="1400"
+                        height="900"
+                        loading="eager"
+                        decoding="async"
                         className="max-w-[92vw] max-h-[82vh] object-contain rounded-2xl border border-white/10"
                     />
 
                     {screenshotList.length > 1 && (
                         <button
+                            type="button"
                             onClick={nextImage}
+                            aria-label="Next screenshot"
                             className="absolute right-4 md:right-8 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-cyan-400 hover:text-black transition text-white"
                         >
                             <ChevronRight size={26} />

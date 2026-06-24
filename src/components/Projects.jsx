@@ -19,6 +19,19 @@ import ProjectModal from "../components/ProjectModal"
 import { useTheme } from "../context/ThemeContext"
 import { playSound } from "../utils/playSound"
 
+function getOptimizedImage(url, width = 700) {
+    if (!url) return ""
+
+    if (url.includes("res.cloudinary.com") && url.includes("/upload/")) {
+        return url.replace(
+            "/upload/",
+            `/upload/f_auto,q_auto,w_${width},dpr_auto/`
+        )
+    }
+
+    return url
+}
+
 function Projects() {
     const { theme } = useTheme()
     const isDark = theme === "dark"
@@ -43,27 +56,27 @@ function Projects() {
         "Backend",
     ]
 
-    const fetchProjects = async () => {
-        try {
-            setLoading(true)
-
-            const q = query(collection(db, "projects"), orderBy("createdAt", "desc"))
-            const snap = await getDocs(q)
-
-            const data = snap.docs.map((item) => ({
-                id: item.id,
-                ...item.data(),
-            }))
-
-            setProjects(data)
-        } catch (error) {
-            console.log(error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
     useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                setLoading(true)
+
+                const q = query(collection(db, "projects"), orderBy("createdAt", "desc"))
+                const snap = await getDocs(q)
+
+                const data = snap.docs.map((item) => ({
+                    id: item.id,
+                    ...item.data(),
+                }))
+
+                setProjects(data)
+            } catch (error) {
+                console.log(error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
         fetchProjects()
     }, [])
 
@@ -73,13 +86,43 @@ function Projects() {
                 } ${project.category || ""}`.toLowerCase()
 
             const matchesSearch = searchText.includes(search.toLowerCase())
-
             const matchesCategory =
                 selectedCategory === "All" || project.category === selectedCategory
 
             return matchesSearch && matchesCategory
         })
     }, [projects, search, selectedCategory])
+
+    const stats = useMemo(
+        () => [
+            {
+                value: `${projects.length}+`,
+                label: "Total Projects",
+                icon: <FolderKanban size={22} />,
+            },
+            {
+                value: `${projects.filter((p) => p.liveLink).length}+`,
+                label: "Live Websites",
+                icon: <Globe2 size={22} />,
+            },
+            {
+                value: `${projects.filter(
+                    (p) =>
+                        p.category === "Admin Panel" ||
+                        p.title?.toLowerCase().includes("admin")
+                ).length
+                    }+`,
+                label: "Admin Panels",
+                icon: <Code2 size={22} />,
+            },
+            {
+                value: "100%",
+                label: "Responsive",
+                icon: <MonitorSmartphone size={22} />,
+            },
+        ],
+        [projects]
+    )
 
     const openProject = (project) => {
         playSound("click")
@@ -96,34 +139,6 @@ function Projects() {
         setSearch("")
         setSelectedCategory("All")
     }
-
-    const stats = [
-        {
-            value: `${projects.length}+`,
-            label: "Total Projects",
-            icon: <FolderKanban size={22} />,
-        },
-        {
-            value: `${projects.filter((p) => p.liveLink).length}+`,
-            label: "Live Websites",
-            icon: <Globe2 size={22} />,
-        },
-        {
-            value: `${projects.filter(
-                (p) =>
-                    p.category === "Admin Panel" ||
-                    p.title?.toLowerCase().includes("admin")
-            ).length
-                }+`,
-            label: "Admin Panels",
-            icon: <Code2 size={22} />,
-        },
-        {
-            value: "100%",
-            label: "Responsive",
-            icon: <MonitorSmartphone size={22} />,
-        },
-    ]
 
     return (
         <Layout>
@@ -200,6 +215,7 @@ function Projects() {
 
                                 <input
                                     type="text"
+                                    aria-label="Search projects"
                                     placeholder="Search projects by name, tech or category..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -211,6 +227,8 @@ function Projects() {
 
                                 {search && (
                                     <button
+                                        type="button"
+                                        aria-label="Clear search"
                                         onClick={() => {
                                             playSound("click")
                                             setSearch("")
@@ -230,6 +248,7 @@ function Projects() {
                                 />
 
                                 <select
+                                    aria-label="Filter projects by category"
                                     value={selectedCategory}
                                     onChange={(e) => {
                                         playSound("click")
@@ -291,7 +310,10 @@ function Projects() {
                             Loading projects...
                         </div>
                     ) : (
-                        <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-8">
+                        <div
+                            className="grid lg:grid-cols-3 md:grid-cols-2 gap-8"
+                            style={{ contentVisibility: "auto" }}
+                        >
                             {filteredProjects.map((project, index) => (
                                 <div
                                     key={project.id}
@@ -313,8 +335,13 @@ function Projects() {
                                     >
                                         {project.imageUrl ? (
                                             <img
-                                                src={project.imageUrl}
-                                                alt={project.title}
+                                                src={getOptimizedImage(project.imageUrl, 700)}
+                                                alt={`${project.title || "Project"} screenshot`}
+                                                width="700"
+                                                height="400"
+                                                loading={index < 2 ? "eager" : "lazy"}
+                                                fetchPriority={index < 2 ? "high" : "low"}
+                                                decoding="async"
                                                 className="w-full h-full object-contain p-4 transition duration-500 group-hover:scale-105"
                                             />
                                         ) : (
@@ -370,6 +397,7 @@ function Projects() {
 
                                         <div className="grid grid-cols-3 gap-3 mt-6">
                                             <button
+                                                type="button"
                                                 onClick={() => openProject(project)}
                                                 className="border border-cyan-400/40 text-cyan-400 rounded-xl py-3 font-bold hover:bg-cyan-400 hover:text-black transition flex items-center justify-center gap-2"
                                             >
@@ -390,6 +418,7 @@ function Projects() {
                                                 </a>
                                             ) : (
                                                 <button
+                                                    type="button"
                                                     disabled
                                                     className={`border rounded-xl py-3 font-bold ${isDark
                                                             ? "bg-white/5 border-white/10 text-gray-500"
@@ -416,6 +445,7 @@ function Projects() {
                                                 </a>
                                             ) : (
                                                 <button
+                                                    type="button"
                                                     disabled
                                                     className={`border rounded-xl py-3 font-bold ${isDark
                                                             ? "bg-white/5 border-white/10 text-gray-500"
@@ -456,6 +486,7 @@ function Projects() {
                             </p>
 
                             <button
+                                type="button"
                                 onClick={clearSearch}
                                 className="mt-6 bg-cyan-400 text-black px-6 py-3 rounded-xl font-bold"
                             >

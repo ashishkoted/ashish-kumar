@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { Typewriter } from "react-simple-typewriter"
+import { lazy, Suspense, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "../firebase/firebase"
@@ -14,14 +13,34 @@ import {
     ExternalLink,
     FolderKanban,
     Sparkles,
-
 } from "lucide-react"
+
+const Typewriter = lazy(() =>
+    import("react-simple-typewriter").then((module) => ({
+        default: module.Typewriter,
+    }))
+)
+
+function getOptimizedImage(url, width = 700) {
+    if (!url) return ""
+
+    if (url.includes("res.cloudinary.com") && url.includes("/upload/")) {
+        return url.replace(
+            "/upload/",
+            `/upload/f_auto,q_auto,w_${width},dpr_auto/`
+        )
+    }
+
+    return url
+}
 
 function Hero() {
     const { theme } = useTheme()
     const isDark = theme === "dark"
     const resumeUrl = "/resume.pdf"
+
     const [showResumePopup, setShowResumePopup] = useState(false)
+    const [loading, setLoading] = useState(true)
 
     const [profile, setProfile] = useState({
         name: "Ashish Kumar",
@@ -38,19 +57,31 @@ function Hero() {
         responseTime: "Under 24 Hours",
     })
 
-    const [loading, setLoading] = useState(true)
-
     useEffect(() => {
         const fetchProfile = async () => {
             try {
+                const cachedProfile = localStorage.getItem("portfolioProfile")
+
+                if (cachedProfile) {
+                    setProfile((prev) => ({
+                        ...prev,
+                        ...JSON.parse(cachedProfile),
+                    }))
+                    setLoading(false)
+                }
+
                 const ref = doc(db, "settings", "profile")
                 const snap = await getDoc(ref)
 
                 if (snap.exists()) {
+                    const data = snap.data()
+
                     setProfile((prev) => ({
                         ...prev,
-                        ...snap.data(),
+                        ...data,
                     }))
+
+                    localStorage.setItem("portfolioProfile", JSON.stringify(data))
                 }
             } catch (error) {
                 console.log(error)
@@ -77,8 +108,8 @@ function Hero() {
         >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.15),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.15),transparent_35%)]"></div>
 
-            <div className="absolute top-28 right-10 w-28 h-28 rounded-full bg-cyan-400/10 blur-2xl"></div>
-            <div className="absolute bottom-20 left-10 w-40 h-40 rounded-full bg-purple-500/10 blur-3xl"></div>
+            <div className="hidden lg:block absolute top-28 right-10 w-28 h-28 rounded-full bg-cyan-400/10 blur-2xl"></div>
+            <div className="hidden lg:block absolute bottom-20 left-10 w-40 h-40 rounded-full bg-purple-500/10 blur-3xl"></div>
 
             <div className="relative max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
                 <div className="fade-up">
@@ -86,17 +117,17 @@ function Hero() {
                         <Rocket size={18} />
                         Welcome to my digital world
                     </p>
+
                     {profile.showAvailability && (
                         <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-green-500/10 border border-green-400/30 text-green-400 font-bold mb-5">
                             <span className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></span>
-
                             {profile.availabilityText || "Available For Freelance Projects"}
-
                             <span className="text-gray-400 font-medium">
                                 • {profile.responseTime || "Under 24 Hours"}
                             </span>
                         </div>
                     )}
+
                     <div className="flex flex-wrap gap-3 mb-6">
                         <div className="px-4 py-2 rounded-full bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 text-sm font-bold">
                             ✔ Currently Accepting New Projects
@@ -127,14 +158,16 @@ function Hero() {
                     >
                         I am a{" "}
                         <span className="text-cyan-400">
-                            <Typewriter
-                                words={typeWords}
-                                loop={0}
-                                cursor
-                                cursorStyle="|"
-                                typeSpeed={70}
-                                deleteSpeed={45}
-                            />
+                            <Suspense fallback={<span>{profile.title || "React Developer"}</span>}>
+                                <Typewriter
+                                    words={typeWords}
+                                    loop={0}
+                                    cursor
+                                    cursorStyle="|"
+                                    typeSpeed={70}
+                                    deleteSpeed={45}
+                                />
+                            </Suspense>
                         </span>
                     </h2>
 
@@ -146,7 +179,6 @@ function Hero() {
                     </p>
 
                     <div className="flex flex-wrap gap-4 mt-8">
-
                         <Link
                             to="/project-request"
                             className="bg-cyan-400 text-black px-7 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition"
@@ -165,10 +197,12 @@ function Hero() {
                         </Link>
 
                         <button
+                            type="button"
                             onClick={() => setShowResumePopup(true)}
+                            aria-label="Open resume preview"
                             className={`border px-6 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-cyan-400 hover:text-black transition ${isDark
-                                ? "border-white/10 text-gray-300"
-                                : "border-gray-200 text-gray-700"
+                                    ? "border-white/10 text-gray-300"
+                                    : "border-gray-200 text-gray-700"
                                 }`}
                         >
                             <FileText size={18} />
@@ -182,9 +216,10 @@ function Hero() {
                                 href="https://github.com/ashishkoted"
                                 target="_blank"
                                 rel="noreferrer"
+                                aria-label="Visit GitHub profile"
                                 className={`w-11 h-11 rounded-full border flex items-center justify-center hover:text-cyan-400 hover:border-cyan-400 transition ${isDark
-                                    ? "bg-white/5 border-white/10"
-                                    : "bg-gray-100 border-gray-200 text-gray-700"
+                                        ? "bg-white/5 border-white/10"
+                                        : "bg-gray-100 border-gray-200 text-gray-700"
                                     }`}
                             >
                                 <Code2 size={20} />
@@ -195,9 +230,10 @@ function Hero() {
                             href="https://t.me/ashishkoted"
                             target="_blank"
                             rel="noreferrer"
+                            aria-label="Contact on Telegram"
                             className={`w-11 h-11 rounded-full border flex items-center justify-center hover:text-cyan-400 hover:border-cyan-400 transition ${isDark
-                                ? "bg-white/5 border-white/10"
-                                : "bg-gray-100 border-gray-200 text-gray-700"
+                                    ? "bg-white/5 border-white/10"
+                                    : "bg-gray-100 border-gray-200 text-gray-700"
                                 }`}
                         >
                             <Send size={20} />
@@ -206,9 +242,10 @@ function Hero() {
                         {profile.email && (
                             <a
                                 href={`mailto:${profile.email}`}
+                                aria-label="Send email"
                                 className={`w-11 h-11 rounded-full border flex items-center justify-center hover:text-cyan-400 hover:border-cyan-400 transition ${isDark
-                                    ? "bg-white/5 border-white/10"
-                                    : "bg-gray-100 border-gray-200 text-gray-700"
+                                        ? "bg-white/5 border-white/10"
+                                        : "bg-gray-100 border-gray-200 text-gray-700"
                                     }`}
                             >
                                 <Mail size={20} />
@@ -218,7 +255,7 @@ function Hero() {
                 </div>
 
                 <div className="relative float">
-                    <div className="absolute -inset-6 bg-cyan-400/20 blur-3xl rounded-full"></div>
+                    <div className="hidden lg:block absolute -inset-6 bg-cyan-400/20 blur-3xl rounded-full"></div>
 
                     <div
                         className={`relative border border-cyan-400/20 rounded-3xl p-8 shadow-[0_0_60px_rgba(34,211,238,0.15)] transition-all duration-500 ${isDark ? "bg-white/5" : "bg-gray-50"
@@ -233,8 +270,13 @@ function Hero() {
                         {profile.profileImage ? (
                             <div className="mb-6">
                                 <img
-                                    src={profile.profileImage}
-                                    alt={profile.name}
+                                    src={getOptimizedImage(profile.profileImage, 700)}
+                                    alt={`${profile.name} - React Developer Portfolio`}
+                                    width="600"
+                                    height="600"
+                                    loading="eager"
+                                    fetchPriority="high"
+                                    decoding="async"
                                     className={`w-full max-h-[320px] object-contain rounded-2xl border border-cyan-400/20 p-3 ${isDark ? "bg-black/30" : "bg-white"
                                         }`}
                                 />
@@ -302,8 +344,8 @@ function Hero() {
                                 <div
                                     key={item[1]}
                                     className={`rounded-xl p-4 text-center ${isDark
-                                        ? "bg-black/30"
-                                        : "bg-white border border-gray-200"
+                                            ? "bg-black/30"
+                                            : "bg-white border border-gray-200"
                                         }`}
                                 >
                                     <h3 className="text-2xl font-black text-cyan-400">
@@ -327,23 +369,23 @@ function Hero() {
                         <Code2 size={34} />
                     </div>
 
-
                     <Link
                         to="/about"
+                        aria-label="Go to about page"
                         className={`absolute -top-6 -right-6 border border-cyan-400/20 text-cyan-400 p-4 rounded-2xl backdrop-blur-xl hover:bg-cyan-400 hover:text-black transition ${isDark ? "bg-white/10" : "bg-white"
                             }`}
                     >
                         <ExternalLink size={26} />
                     </Link>
-
                 </div>
             </div>
+
             {showResumePopup && (
                 <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
                     <div
                         className={`w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-3xl border shadow-[0_0_50px_rgba(34,211,238,0.25)] ${isDark
-                            ? "bg-[#08111f] border-cyan-400/20 text-white"
-                            : "bg-white border-gray-200 text-gray-900"
+                                ? "bg-[#08111f] border-cyan-400/20 text-white"
+                                : "bg-white border-gray-200 text-gray-900"
                             }`}
                     >
                         <div
@@ -360,7 +402,9 @@ function Hero() {
                             </div>
 
                             <button
+                                type="button"
                                 onClick={() => setShowResumePopup(false)}
+                                aria-label="Close resume preview"
                                 className={`w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition ${isDark ? "bg-white/10" : "bg-gray-100"
                                     }`}
                             >
@@ -370,11 +414,12 @@ function Hero() {
 
                         <div className="p-4">
                             <iframe
+                                loading="lazy"
                                 src={resumeUrl}
-                                title="Resume Preview"
+                                title="Ashish Kumar Resume Preview"
                                 className={`w-full h-[70vh] rounded-2xl border ${isDark
-                                    ? "bg-black/40 border-white/10"
-                                    : "bg-white border-gray-200"
+                                        ? "bg-black/40 border-white/10"
+                                        : "bg-white border-gray-200"
                                     }`}
                             ></iframe>
                         </div>

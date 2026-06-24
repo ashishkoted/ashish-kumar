@@ -20,5 +20,11 @@ export const uploadToCloudinary = async (file) => {
         throw new Error(data.error?.message || "Cloudinary upload failed")
     }
 
-    return data.secure_url
+    // Optimized Cloudinary URL
+    const optimizedUrl = data.secure_url.replace(
+        "/upload/",
+        "/upload/f_auto,q_auto,w_800,dpr_auto/"
+    )
+
+    return optimizedUrl
 }
